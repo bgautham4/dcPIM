@@ -136,6 +136,9 @@ class DCExpParams {
         double pim_resend_timeout;
         int pim_low_priority;
         int pim_link_pkts;
+
+        bool pim_modified; // G : Run modified pim?
+        double alpha; // G : Value of alpha for modified pim
         double get_full_pkt_tran_delay(uint32_t size_in_byte = 1500)
         {
             return size_in_byte * 8 / this->bandwidth;

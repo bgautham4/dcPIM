@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <climits>
+#include <random>
 #include "../coresim/event.h"
 #include "../coresim/flow.h"
 #include "../coresim/packet.h"
@@ -421,8 +422,42 @@ void PimEpoch::handle_all_req() {
     }
     while(!this->req_q.empty() && avail_link > 0) {
         index = 0;
-        if(!select_min_r)
+        if (!params.pim_modified) {
+            if(!select_min_r) {
             index = rand() % this->req_q.size();
+            }
+        }
+        
+        else {
+            //Create two vectors one of them
+            // holds the receiver indices and the 
+            // other holds its sender set's cardinality
+            std::vector<uint32_t> receiver_indices;
+            std::vector<uint32_t> sender_counts;
+            for (int i = 0; i < this->req_q.size(); i++) {
+                auto receiver = (PimHost*)req_q[i].f->dst;
+                uint32_t sender_count = receiver->src_to_flows.size();
+                receiver_indices.push_back(i);
+                sender_counts.push_back(sender_count);
+            }
+            double denominator = 0;
+            for (uint32_t count:sender_counts) {
+                denominator += std::pow(count, params.alpha);
+            }
+            //Using the sender_counts form the
+            //PMF, use this PMF to sample a receiver
+            std::vector<double> pmf;
+            for (uint32_t count:sender_counts) {
+                pmf.push_back(std::pow(count, params.alpha) / denominator);
+            }
+            // Create a random engine
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            // Create a discrete distribution with the weights
+            std::discrete_distribution<int> distribution(pmf.begin(), pmf.end());
+            //Sample a receiver
+            index = receiver_indices[distribution(gen)];
+        }
         /* check iteration number */
         if(this->req_q[index].iter != this->iter) {
             assert(this->req_q[index].iter < this->iter);

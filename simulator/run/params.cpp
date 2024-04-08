@@ -8,6 +8,8 @@
 
 DCExpParams params;
 
+extern bool print_flow; //In debug.cpp
+
 /* Read parameters from a config file */
 void read_experiment_parameters(std::string conf_filename, uint32_t exp_type) {
     std::ifstream input(conf_filename);
@@ -36,6 +38,7 @@ void read_experiment_parameters(std::string conf_filename, uint32_t exp_type) {
 
     params.fastpass_localize = false;
     params.fastpass_limit_conns = false;
+    params.pim_modified = false; // G : Dont run modified pim by default..
 
     /* pim parameter */
     params.util_file = "";
@@ -330,6 +333,15 @@ void read_experiment_parameters(std::string conf_filename, uint32_t exp_type) {
         } 
         else if (key == "fastpass_limit_conns") {
             lineStream >> params.fastpass_limit_conns;
+        }
+        else if (key == "pim_modified") {
+            lineStream >> params.pim_modified;
+        }
+        else if (key == "alpha") { 
+            lineStream >> params.alpha;
+        }
+        else if (key == "print_flow") {
+            lineStream >> print_flow;
         }
         //else if (key == "dctcp_delayed_ack_freq") {
         //    lineStream >> params.dctcp_delayed_ack_freq;
