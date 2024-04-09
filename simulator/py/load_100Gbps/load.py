@@ -277,9 +277,12 @@ num_host_types: 13
 
 
 #runs = ['pfabric', 'phost', 'fastpass', 'random', 'ruf', 'pim']
-runs = ['pim', 'phost']
-workloads = ['imc10', 'websearch', 'datamining', 'constant']
-loads = [0.5, 0.6, 0.7, 0.8, 0.82, 0.84, 0.86, 0.88]
+#runs = ['pim', 'phost']
+#workloads = ['imc10', 'websearch', 'datamining', 'constant']
+workloads = ['datamining',]
+runs = ['pim']
+loads = [0.5,0.6,0.7,0.8]
+#loads = [0.5, 0.6, 0.7, 0.8, 0.82, 0.84, 0.86, 0.88]
 for r in runs:
     for w in workloads:
         #  generate conf file
@@ -298,5 +301,5 @@ for r in runs:
 	        	conf_str = conf_str_pim.format(load, w)
 	        confFile = "conf_{0}_{1}_{2}.txt".format(r, w, (load * 10))
 	        with open(confFile, 'w') as f:
-	            print confFile
+	            #print confFile
 	            f.write(conf_str)

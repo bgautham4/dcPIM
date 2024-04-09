@@ -1,4 +1,6 @@
 import sys, os
+import numpy as np
+import json
 
 MSS = 1460 #In bytes
 OVERHEAD_BYTES = 40
@@ -38,11 +40,16 @@ slowdown_mean_data = dict()
 
 for bdp_bin, slowdown_list in slowdown_histogram.items():
     slowdown_list.sort()
-    N = len(slowdown_list)
-    n = int( (99.0/100.0) * (N-1) )
+    percentile_99 = np.percentile(slowdown_list, 99)
     mean = sum(slowdown_list) / len(slowdown_list)
 
-    slowdown_mean_data[bdp_bin] = (mean, slowdown_list[n])
+    slowdown_mean_data[bdp_bin] = (mean, percentile_99)
 
-print(slowdown_mean_data)
+dir_path = os.path.dirname(file_path)
+
+with open(f'{dir_path}/data.json', "w") as json_file:
+    json.dump(slowdown_mean_data, json_file)
+
+
+
 

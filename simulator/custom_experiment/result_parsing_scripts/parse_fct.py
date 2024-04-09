@@ -1,4 +1,6 @@
 import sys, os
+import numpy as np
+import json
 
 MSS = 1460 #In bytes
 OVERHEAD_BYTES = 40
@@ -38,11 +40,16 @@ fct_mean_data = dict()
 
 for bdp_bin, fct_list in fct_histogram.items():
     fct_list.sort()
-    N = len(fct_list)
-    n = int( (99.0/100.0) * (N-1) )
+    percentile_99 = np.percentile(fct_list, 99)
     mean = sum(fct_list) / len(fct_list)
 
-    fct_mean_data[bdp_bin] = (mean, fct_list[n])
+    fct_mean_data[bdp_bin] = (mean, percentile_99)
 
-print(fct_mean_data)
+
+dir_path = os.path.dirname(file_path)
+
+with open(f'{dir_path}/data.json', "w") as json_file:
+    json.dump(data, json_file)
+
+
 
