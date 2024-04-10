@@ -46,3 +46,4 @@ interarrival_cdf: none
 num_host_types: 13
 pim_modified: 1
 alpha: -10
+util_file: results/pim/flow_type_imc10_mod/util_0.7.txt

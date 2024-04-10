@@ -11,12 +11,12 @@ if [[ ! -d "bin" ]]; then
 fi
 
 source bin/activate #Activate the virtual env
-
-for result_dir in "../results/$protocol/flow_type_$exp_type/"*/; do
-    data_file=$(ls | grep "data")
-    if [[ ! -z $data_file ]]; then
-        continue
-    fi
+result_dir="../results/$protocol/flow_type_$exp_type"
+#=for result_dir in "../results/$protocol/flow_type_$exp_type/"*/; do
+#=    data_file=$(ls | grep "data")
+#=    if [[ ! -z $data_file ]]; then
+#=        continue
+#=    fi
 
     for result_file in "$result_dir/"*; do
         variable_parameter=$(basename -s .txt $result_file | cut -d'_' -f3)
@@ -24,7 +24,7 @@ for result_dir in "../results/$protocol/flow_type_$exp_type/"*/; do
         mv "$result_dir/data.json" "$result_dir/data_$variable_parameter.json"
         echo "Parsed $result_file.."
     done
-done
+#=done
 
 deactivate #Exit virtual env
 

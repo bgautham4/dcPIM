@@ -6,7 +6,9 @@ timestamp=$(date +'%m-%dT%H-%M-%S')
 protocol=$1
 exp_type=$2
 
-output_dir="results/$protocol/flow_type_$exp_type/$timestamp"
+#output_dir="results/$protocol/flow_type_$exp_type/$timestamp"
+
+output_dir="results/$protocol/flow_type_$exp_type/"
 
 if [[ ! -e $output_dir ]]; then
         mkdir -p $output_dir
