@@ -18,11 +18,11 @@ result_dir="../results/$protocol/flow_type_$exp_type"
 #=        continue
 #=    fi
 
-    for result_file in "$result_dir/flow_"*; do
-        variable_parameter=$(basename -s .txt $result_file | cut -d'_' -f3)
-        python3 parse_slowdown.py $result_file #Create the data.json file
-        mv "$result_dir/data.json" "$result_dir/data_$variable_parameter.json"
-        echo "Parsed $result_file.."
+    for util_file in "$result_dir/util_"*; do
+        variable_parameter=$(basename -s .txt $util_file | cut -d'_' -f2)
+        util=$(python3 parse_util.py $util_file)
+        echo "$variable_parameter,$util" >> "$result_dir/util.csv"
+        echo "Parsed $util_file.."
     done
 #=done
 

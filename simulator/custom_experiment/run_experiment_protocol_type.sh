@@ -14,7 +14,7 @@ if [[ ! -e $output_dir ]]; then
         mkdir -p $output_dir
 fi
    
-for conf_file in "conf_files/$protocol/flow_type_$exp_type"/*; do
+for conf_file in "conf_files/$protocol/flow_type_$exp_type/conf_file_"*; do
     
     variable_parameter=$(basename -s .txt "$conf_file" | cut -d'_' -f3)
     
