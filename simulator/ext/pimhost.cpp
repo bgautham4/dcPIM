@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <assert.h>
+#include <iterator>
 #include <stdlib.h>
 #include <climits>
 #include <random>
@@ -456,7 +457,14 @@ void PimEpoch::handle_all_req() {
             // Create a discrete distribution with the weights
             std::discrete_distribution<int> distribution(pmf.begin(), pmf.end());
             //Sample a receiver
-            index = receiver_indices[distribution(gen)];
+            if (params.alpha > 0) {// G : Use this to indicate alpha = -inf
+                auto min_it = std::min_element(sender_counts.begin(), sender_counts.end());
+                int min_index = std::distance(sender_counts.begin(), min_it);
+                index = receiver_indices[min_index];
+            }
+            else {
+                index = receiver_indices[distribution(gen)];
+            }
         }
         /* check iteration number */
         if(this->req_q[index].iter != this->iter) {
