@@ -3,6 +3,7 @@
 
 #include <string>
 #include <fstream>
+#include <cstdint>
 
 class DCExpParams {
     public:

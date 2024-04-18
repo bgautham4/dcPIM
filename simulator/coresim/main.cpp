@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <iostream>
 #include <algorithm>
 #include <fstream>
@@ -22,6 +23,9 @@
 #include "../ext/rufTopology.h"
 
 #include "../run/params.h"
+
+#include "../ext/pimhost.h"
+
 
 using namespace std;
 
@@ -52,6 +56,8 @@ uint32_t sent_packets = 0;
 
 extern DCExpParams params;
 double start_time = -1;
+
+extern vector<uint32_t> mtracker;
 
 const std::string currentDateTime() {
     time_t     now = time(0);
@@ -185,6 +191,14 @@ int main (int argc, char ** argv) {
     time_t end_time;
     time(&end_time);
     double duration = difftime(end_time, start_time);
+    uint32_t epoch = 0;
+    double avg_matches = 0;
+    for (auto match_count : mtracker) {
+        avg_matches += match_count;
+        epoch++;
+    }
+    avg_matches /= epoch;
+    cout << "AVG_MATCHES " << avg_matches << endl;
     cout << currentDateTime() << " Simulator ended. Execution time: " << duration << " seconds\n";
 }
 

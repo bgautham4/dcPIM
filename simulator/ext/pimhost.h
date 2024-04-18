@@ -1,6 +1,7 @@
 #ifndef PIM_HOST_H
 #define PIM_HOST_H
 
+#include <cstdint>
 #include <set>
 #include <queue>
 #include <unordered_map>
@@ -264,4 +265,6 @@ class PimTokenProcessingEvent : public Event {
         PIM_Vlink *link;
         bool is_timeout_evt;
 };
+
+
 #endif

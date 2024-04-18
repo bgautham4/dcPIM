@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <assert.h>
+#include <cstdint>
 #include <iterator>
 #include <stdlib.h>
 #include <climits>
@@ -20,6 +21,8 @@ extern void add_to_event_queue(Event*);
 extern DCExpParams params;
 extern uint32_t total_finished_flows;
 extern Topology *topology;
+
+std::vector<uint32_t> mtracker;
 
 // uint64_t total_recvd = 0;
 void PIM_Vlink::schedule_token_proc_evt(double time, bool is_timeout)
@@ -521,6 +524,17 @@ void PimEpoch::handle_all_grants() {
         prompt_link = std::min(need_link, prompt_link);
         f = grants_q[index].f;
         f->send_accept_pkt(this->iter, this->epoch, need_link, prompt_link);
+        if(this->epoch >= 0 && this->epoch >= mtracker.size()) {
+            int diff = this->epoch - mtracker.size();
+            while(diff >= 0) {
+                mtracker.push_back(0);
+                diff--;
+            }
+            mtracker[this->epoch] = 1;
+        }
+        else {
+            mtracker[epoch] += 1;
+        }
         if(debug_host(f->dst->id) || debug_host(f->src->id)) {
             std::cout << get_current_time() << " epoch " << this->epoch << " iter " << this->iter << " dst " << this->host->id << " accept " << f->src->id << std::endl;
         }
