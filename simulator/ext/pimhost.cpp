@@ -462,8 +462,16 @@ void PimEpoch::handle_all_req() {
             //Sample a receiver
             if (params.alpha > 0) {// G : Use this to indicate alpha = -inf
                 auto min_it = std::min_element(sender_counts.begin(), sender_counts.end());
-                int min_index = std::distance(sender_counts.begin(), min_it);
-                index = receiver_indices[min_index];
+                decltype(sender_counts.size()) vec_index = 0;
+                std::vector<decltype(vec_index)> indices;
+                for(auto val:sender_counts) {
+                    if(val == *min_it) {
+                        indices.push_back(vec_index);
+                        ++vec_index;
+                    }
+                }
+                //int min_index = std::distance(sender_counts.begin(), min_it);
+                index = receiver_indices[indices[rand() % indices.size()]];
             }
             else {
                 index = receiver_indices[distribution(gen)];
