@@ -467,8 +467,8 @@ void PimEpoch::handle_all_req() {
                 for(auto val:sender_counts) {
                     if(val == *min_it) {
                         indices.push_back(vec_index);
-                        ++vec_index;
                     }
+                    ++vec_index;
                 }
                 //int min_index = std::distance(sender_counts.begin(), min_it);
                 index = receiver_indices[indices[rand() % indices.size()]];
