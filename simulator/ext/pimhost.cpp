@@ -847,13 +847,15 @@ void PimHost::start_flow(PimFlow* f) {
              <<"\n";
     }
     f->assign_init_token();
+    //f->sending_rts();
+    this->notification_queue.push(f);
     // this->active_sending_flows.push(f);
     // if(!f->tokens.empty()) {
     //     if (((SchedulingHost*) this)->host_proc_event == NULL) {
     //         this->schedule_host_proc_evt();
     //     }
     // }
-    f->sending_rts();
+    
     if(!token_q.empty()) {
         if(this->host_proc_event != NULL && this->host_proc_event->is_timeout) {
             this->host_proc_event->cancelled = true;
@@ -1152,9 +1154,7 @@ void PimHost::flow_finish_at_receiver(Packet* pkt) {
 
 void NotificationQueue::push(PimFlow *flow) {
     this->pending_flows.push(flow);
-    if(this->active_flows.size() == 2) {
-        return;
-    }
+   
     while (this->active_flows.size() < 2) {
         if (this->pending_flows.empty()) {
             break;
