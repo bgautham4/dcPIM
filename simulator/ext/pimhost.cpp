@@ -1149,3 +1149,34 @@ void PimHost::flow_finish_at_receiver(Packet* pkt) {
         return;
     ((PimFlow*)pkt->flow)->finished_at_receiver = true;
 }
+
+void NotificationQueue::push(PimFlow *flow) {
+    this->pending_flows.push(flow);
+    if(this->active_flows.size() == 2) {
+        return;
+    }
+    while (this->active_flows.size() < 2) {
+        if (this->pending_flows.empty()) {
+            break;
+        }
+        PimFlow *new_flow = this->pending_flows.front();
+        this->active_flows.push_back(new_flow);
+        this->pending_flows.pop();
+        new_flow->sending_rts(); //Send notification.
+    }
+
+}
+
+void NotificationQueue::pop_and_notify_next(PimFlow *flow) {
+    auto it = std::find(this->active_flows.begin(), this->active_flows.end(), flow);
+    this->active_flows.erase(it);
+    while (this->active_flows.size() < 2) {
+        if (this->pending_flows.empty()) {
+            break;
+        }
+        PimFlow *new_flow = this->pending_flows.front();
+        this->active_flows.push_back(new_flow);
+        this->pending_flows.pop();
+        new_flow->sending_rts(); //Send notification.
+    }
+}

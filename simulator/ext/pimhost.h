@@ -22,6 +22,8 @@ class NewEpochEvent;
 class PimHost;
 class PimTokenProcessingEvent;
 
+class NotificationQueue;
+
 struct PIM_Vlink {
     int id;
     int total_links;
@@ -161,6 +163,18 @@ class PimTokenComparator {
 //         bool operator() (CapabilityFlow* a, CapabilityFlow* b);
 // };
 
+class NotificationQueue { /* G: This type will limit the number of active
+flows by limiting the number of notifications sent to receivers (stage-1 thinning)
+*/
+    public:
+        std::vector<PimFlow*> active_flows;
+        std::queue<PimFlow*> pending_flows;
+        
+        //Methods:
+        void push(PimFlow *flow);
+        void pop_and_notify_next(PimFlow *flow);
+};
+
 class PimHost : public SchedulingHost {
     public:
         PimHost(uint32_t id, double rate, uint32_t queue_type);
@@ -226,6 +240,7 @@ class PimHost : public SchedulingHost {
         // int hold_on;
         // int total_capa_schd_evt_count;
         // int could_better_schd_count;
+        NotificationQueue notification_queue;
 };
 
 #define PROCESS_RECEIVER_ITER_REQUEST 21

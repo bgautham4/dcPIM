@@ -314,7 +314,8 @@ void PimFlow::receive(Packet *p) {
         this->packets_received.clear();
         this->clear_token();
         // ((RufHost*)(this->src))->active_sending_flow = NULL;
-        add_to_event_queue(new FlowFinishedEvent(get_current_time(), this));
+        add_to_event_queue(new FlowFinishedEvent(get_current_time(), this));// G : Flow finished, send a new notification.
+        (reinterpret_cast<PimHost*>(this->src))->notification_queue.pop_and_notify_next(this);
     } else {
         std::cout << p->type << std::endl;
         assert(false);
