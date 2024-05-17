@@ -23,7 +23,7 @@ void read_experiment_parameters(std::string conf_filename, uint32_t exp_type) {
     params.print_max_min_fairness = false;
     params.num_hosts = 144;
     params.debug_controller_queue = false;
-    params.debug_queue = true;
+    params.debug_queue = false;
     params.debug_queue_interval = 0.000002;
     // params.policy = "rtt";
     params.topology = "LeafSpine";
@@ -339,6 +339,9 @@ void read_experiment_parameters(std::string conf_filename, uint32_t exp_type) {
         }
         else if (key == "alpha") { 
             lineStream >> params.alpha;
+        }
+        else if (key == "thin_type") {
+            lineStream >> params.thin_type;
         }
         else if (key == "print_flow") {
             lineStream >> print_flow;

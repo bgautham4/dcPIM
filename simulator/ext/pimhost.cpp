@@ -22,7 +22,7 @@ extern DCExpParams params;
 extern uint32_t total_finished_flows;
 extern Topology *topology;
 
-std::vector<uint32_t> mtracker;
+std::vector<uint32_t> mtracker; // G : Vector to track matches per round
 
 // uint64_t total_recvd = 0;
 void PIM_Vlink::schedule_token_proc_evt(double time, bool is_timeout)
@@ -727,6 +727,63 @@ void PimEpoch::schedule_receiver_iter_evt() {
 
 }
 
+//G : Notification thinning strats..
+NotificationThinner::~NotificationThinner() { }
+
+SampleDNotify::SampleDNotify(uint32_t d) {this->d = d;}
+
+NotifyAll::NotifyAll() { }
+
+void NotifyAll::push(PimFlow *flow) {
+    flow->sending_rts(); //The same as no thinning
+}
+
+void NotifyAll::pop_and_notify_next(PimFlow *flow) {
+    return; //Do nothing
+}
+
+void SampleDNotify::push(PimFlow *flow) {
+    if (flow->size_in_pkt <= static_cast<int>(params.BDP)) { //Small flows not queued
+        flow->sending_rts();
+        return;
+    }
+
+    this->pending_flows.push_back(flow);
+   
+    while (this->active_flows.size() < this->d) {
+        if (this->pending_flows.empty()) {
+            break;
+        }
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::shuffle(this->pending_flows.begin(), this->pending_flows.end(), gen);
+        PimFlow *new_flow = this->pending_flows.front();
+        this->active_flows.push_back(new_flow);
+        this->pending_flows.pop_front();
+        new_flow->sending_rts(); //Send notification.
+    }
+
+}
+
+void SampleDNotify::pop_and_notify_next(PimFlow *flow) {
+    auto it = std::find(this->active_flows.begin(), this->active_flows.end(), flow);
+    if (it != this->active_flows.end()) {
+        this->active_flows.erase(it);
+    }
+    while (this->active_flows.size() < this->d) {
+        if (this->pending_flows.empty()) {
+            break;
+        }
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::shuffle(this->pending_flows.begin(), this->pending_flows.end(), gen);
+        PimFlow *new_flow = this->pending_flows.front();
+        this->active_flows.push_back(new_flow);
+        this->pending_flows.pop_front();
+        new_flow->sending_rts(); //Send notification.
+    }
+}
+
 PimHost::PimHost(uint32_t id, double rate, uint32_t queue_type) : SchedulingHost(id, rate, queue_type) {
     // this->capa_proc_evt = NULL;
     // this->hold_on = 0;
@@ -749,6 +806,17 @@ PimHost::PimHost(uint32_t id, double rate, uint32_t queue_type) : SchedulingHost
     this->hold_on = 0;
     // this->token_send_evt = NULL;
     total_token_schd_evt_count = 0;
+    switch (params.thin_type) {
+        case 0:
+            notification_thinner = new NotifyAll();
+            break;
+        case 1:
+            notification_thinner = new SampleDNotify(2);
+            break;
+        default:
+            notification_thinner = new NotifyAll();
+            break;
+    }
 
 }
 
@@ -848,7 +916,7 @@ void PimHost::start_flow(PimFlow* f) {
     }
     f->assign_init_token();
     //f->sending_rts();
-    this->notification_queue.push(f);
+    this->notification_thinner->push(f);
     // this->active_sending_flows.push(f);
     // if(!f->tokens.empty()) {
     //     if (((SchedulingHost*) this)->host_proc_event == NULL) {
@@ -1152,31 +1220,4 @@ void PimHost::flow_finish_at_receiver(Packet* pkt) {
     ((PimFlow*)pkt->flow)->finished_at_receiver = true;
 }
 
-void NotificationQueue::push(PimFlow *flow) {
-    this->pending_flows.push(flow);
-   
-    while (this->active_flows.size() < 2) {
-        if (this->pending_flows.empty()) {
-            break;
-        }
-        PimFlow *new_flow = this->pending_flows.front();
-        this->active_flows.push_back(new_flow);
-        this->pending_flows.pop();
-        new_flow->sending_rts(); //Send notification.
-    }
 
-}
-
-void NotificationQueue::pop_and_notify_next(PimFlow *flow) {
-    auto it = std::find(this->active_flows.begin(), this->active_flows.end(), flow);
-    this->active_flows.erase(it);
-    while (this->active_flows.size() < 2) {
-        if (this->pending_flows.empty()) {
-            break;
-        }
-        PimFlow *new_flow = this->pending_flows.front();
-        this->active_flows.push_back(new_flow);
-        this->pending_flows.pop();
-        new_flow->sending_rts(); //Send notification.
-    }
-}

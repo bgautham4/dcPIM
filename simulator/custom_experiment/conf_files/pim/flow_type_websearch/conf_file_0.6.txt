@@ -45,3 +45,4 @@ magic_inflate: 1
 interarrival_cdf: none
 num_host_types: 13
 util_file: results/pim/flow_type_websearch/util_0.6.txt
+thin_type: 0

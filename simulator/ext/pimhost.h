@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <set>
 #include <queue>
+#include <sys/types.h>
 #include <unordered_map>
 #include "../coresim/node.h"
 #include "../coresim/packet.h"
@@ -163,14 +164,32 @@ class PimTokenComparator {
 //         bool operator() (CapabilityFlow* a, CapabilityFlow* b);
 // };
 
-class NotificationQueue { /* G: This type will limit the number of active
+
+class NotificationThinner { //Abstract class for specifying different thinning strats
+    public:
+        virtual void push(PimFlow *flow) = 0;
+        virtual void pop_and_notify_next(PimFlow *flow) = 0;
+        virtual ~NotificationThinner();
+};
+
+class SampleDNotify : public NotificationThinner { /* G: This type will limit the number of active
 flows by limiting the number of notifications sent to receivers (stage-1 thinning)
 */
-    public:
+    private:
+        u_int32_t d;
         std::vector<PimFlow*> active_flows;
-        std::queue<PimFlow*> pending_flows;
-        
+        std::deque<PimFlow*> pending_flows;
+    public:
         //Methods:
+        SampleDNotify(uint32_t d);
+        void push(PimFlow *flow);
+        void pop_and_notify_next(PimFlow *flow);
+};
+
+class NotifyAll : public NotificationThinner {  
+    /*Send notification to all*/
+    public:
+        NotifyAll();
         void push(PimFlow *flow);
         void pop_and_notify_next(PimFlow *flow);
 };
@@ -240,7 +259,7 @@ class PimHost : public SchedulingHost {
         // int hold_on;
         // int total_capa_schd_evt_count;
         // int could_better_schd_count;
-        NotificationQueue notification_queue;
+        NotificationThinner *notification_thinner;
 };
 
 #define PROCESS_RECEIVER_ITER_REQUEST 21
@@ -280,6 +299,5 @@ class PimTokenProcessingEvent : public Event {
         PIM_Vlink *link;
         bool is_timeout_evt;
 };
-
 
 #endif
