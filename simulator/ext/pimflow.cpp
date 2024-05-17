@@ -6,6 +6,7 @@
 
 #include "pimhost.h"
 #include "pimflow.h"
+#include <cstdint>
 #include <fstream>
 #include "../run/params.h"
 
@@ -62,6 +63,7 @@ void PimFlow::send_grants(int iter, int epoch, int remaining_sz, int total_links
     }
     PIMGrants* grants = new PIMGrants(this, this->src, this->dst, iter, epoch, remaining_sz, total_links, prompt_links);
     add_to_event_queue(new PacketQueuingEvent(get_current_time(), grants, src->queue));
+    log_control_packet();
 }
 
 void PimFlow::send_grantsr(int iter, int epoch, int total_link,  int prompt_links) {
@@ -70,6 +72,7 @@ void PimFlow::send_grantsr(int iter, int epoch, int total_link,  int prompt_link
     }
     GrantsR* grantsr = new GrantsR(this, this->src, this->dst, iter, epoch, total_link, prompt_links);
     add_to_event_queue(new PacketQueuingEvent(get_current_time(), grantsr, src->queue));
+    log_control_packet();
 }
 
 void PimFlow::send_req(int iter, int epoch, int total_links, int prompt_links) {
@@ -79,6 +82,7 @@ void PimFlow::send_req(int iter, int epoch, int total_links, int prompt_links) {
     }
     PIMREQ* req = new PIMREQ(this, this->dst, this->src, iter, epoch, this->remaining_pkts(), total_links, prompt_links);
     add_to_event_queue(new PacketQueuingEvent(get_current_time(), req, dst->queue));
+    log_control_packet();
 }
 
 void PimFlow::send_accept_pkt(int iter, int epoch, int total_links, int prompt_links){
@@ -88,6 +92,7 @@ void PimFlow::send_accept_pkt(int iter, int epoch, int total_links, int prompt_l
     }
     AcceptPkt* dpkt = new AcceptPkt(this, this->dst, this->src, iter, epoch, total_links, prompt_links);
     add_to_event_queue(new PacketQueuingEvent(get_current_time(), dpkt, dst->queue));
+    log_control_packet();
 }
 // void PimFlow::send_offer_pkt(int iter, int epoch, bool is_free) {
 //     if(debug_flow(id)) {
@@ -478,4 +483,24 @@ void PimFlow::sending_rts() {
     }
     FlowRTS* rts = new FlowRTS(this, this->src, this->dst, this->size_in_pkt);
     add_to_event_queue(new PacketQueuingEvent(get_current_time(), rts, src->queue));
+    log_control_packet();
+}
+
+
+// G: Control packet logging:
+
+void log_control_packet() {
+    static std::ofstream log_file;
+    static long long pkt_cnt = 0;
+    static double last_recorded_time = 1.0;
+    
+    pkt_cnt++;
+
+    if(get_current_time() - last_recorded_time > 0.00002) {
+        if (!log_file.is_open()) {
+        log_file.open(params.ctrl_pkt_log_file);
+        }
+        log_file << get_current_time() << "," << pkt_cnt << std::endl;
+        last_recorded_time = get_current_time();
+    }
 }

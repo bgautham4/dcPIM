@@ -115,6 +115,7 @@ public:
     // int notified_num_flow_at_sender;
 };
 
+void log_control_packet();
 
 #endif
 

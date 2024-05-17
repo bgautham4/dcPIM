@@ -173,7 +173,7 @@ class NotificationThinner { //Abstract class for specifying different thinning s
 };
 
 class SampleDNotify : public NotificationThinner { /* G: This type will limit the number of active
-flows by limiting the number of notifications sent to receivers (stage-1 thinning)
+flows by limiting the number of notifications (to d) sent to receivers (stage-1 thinning)
 */
     private:
         u_int32_t d;

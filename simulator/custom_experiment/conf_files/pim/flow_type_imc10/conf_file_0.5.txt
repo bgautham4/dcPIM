@@ -46,3 +46,4 @@ interarrival_cdf: none
 num_host_types: 13
 util_file: results/pim/flow_type_imc10/util_0.5.txt
 thin_type: 0
+cpkt_log_file: results/pim/flow_type_imc10/cpf_0.5.txt

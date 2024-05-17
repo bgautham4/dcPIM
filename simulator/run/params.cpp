@@ -343,6 +343,9 @@ void read_experiment_parameters(std::string conf_filename, uint32_t exp_type) {
         else if (key == "thin_type") {
             lineStream >> params.thin_type;
         }
+        else if (key == "cpkt_log_file") {
+            lineStream >> params.ctrl_pkt_log_file;
+        }
         else if (key == "print_flow") {
             lineStream >> print_flow;
         }
