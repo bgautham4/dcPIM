@@ -6,6 +6,10 @@
 //
 
 #include "flow_generator.h"
+#include <cstdint>
+#include <random>
+#include <algorithm>
+#include <iterator>
 
 FlowGenerator::FlowGenerator(uint32_t num_flows, Topology *topo, std::string filename) {
     this->num_flows = num_flows;
@@ -893,3 +897,33 @@ void OutcastTM::make_flows() {
 // }
 
 
+//G: DFlow creation
+DFlows::DFlows(uint32_t num_flows, Topology *topo, std::string filename, uint32_t d) : FlowGenerator(num_flows, topo, filename) {
+    this->d = d;
+}
+
+void DFlows::make_flows() {
+    for (size_t i=0; i<topo->hosts.size();++i) {
+        std::vector<decltype(topo->hosts.size())> receivers;
+        for (size_t j = 0; j<topo->hosts.size();++j) {
+            if (j==i) {
+                continue;
+            }
+            receivers.push_back(j);
+        }
+        std::vector<decltype((topo->hosts.size()))> sampled_receivers;
+        std::mt19937 random_generator(std::random_device{}());
+        std::sample(receivers.begin(), receivers.end(),
+            std::back_inserter(sampled_receivers), this->d, random_generator);
+        for (auto receiver : sampled_receivers) {
+            Flow *f = Factory::get_flow(1.0001,
+                (uint32_t) 1000000*params.mss,
+                topo->hosts[i],
+                topo->hosts[receiver],
+                params.flow_type
+            );
+            FlowArrivalEvent *evt = new FlowArrivalEvent(1.0001, f);
+            flow_arrivals.push_back(evt);
+        }
+    }
+}

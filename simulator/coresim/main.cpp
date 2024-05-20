@@ -163,7 +163,7 @@ void run_scenario() {
         //     }
         // }
         delete ev;
-        if (total_finished_flows >= params.num_flows_to_run)
+        if (mtracker.size() >= 120)
             return;
     }
 }
@@ -174,8 +174,8 @@ int main (int argc, char ** argv) {
     time_t start_time;
     time(&start_time);
 
-    //srand(time(NULL));
-    srand(0);
+    srand(time(NULL)); //Seed RNG
+    //srand(0);
     std::cout.precision(15);
 
     uint32_t exp_type = atoi(argv[1]);

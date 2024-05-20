@@ -190,8 +190,17 @@ void run_experiment(int argc, char **argv, uint32_t exp_type) {
 
     FlowGenerator *fg;
     // Make the camparision apple to apple;
-    srand(0);
-    if (params.use_flow_trace) {
+    if (params.test_exp) {
+        switch (params.exp_type) {
+            case 0:
+                fg = new DFlows(num_flows, topology, "", params.d);
+                fg->make_flows();
+                break;
+            default:
+                return;
+        }
+    }
+    else if (params.use_flow_trace) {
         if(params.cdf_or_flow_trace != "") {
             fg = new FlowReader(num_flows, topology, params.cdf_or_flow_trace);
             fg->make_flows();

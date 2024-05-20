@@ -8,6 +8,7 @@
 #ifndef FLOW_GEN_H
 #define FLOW_GEN_H
 
+#include <cstdint>
 #include <iostream>
 #include <algorithm>
 #include <fstream>
@@ -120,5 +121,13 @@ class WorstcaseTM : public FlowGenerator {
 public:
     WorstcaseTM(uint32_t num_flows, Topology *topo, std::string filename);
     virtual void make_flows();
+};
+
+class DFlows : public FlowGenerator {
+    private:
+        uint32_t d;
+    public:
+        DFlows(uint32_t num_flows, Topology *topo, std::string filename, uint32_t d);
+        virtual void make_flows();
 };
 #endif

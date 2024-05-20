@@ -39,6 +39,7 @@ void read_experiment_parameters(std::string conf_filename, uint32_t exp_type) {
     params.fastpass_localize = false;
     params.fastpass_limit_conns = false;
     params.pim_modified = false; // G : Dont run modified pim by default..
+    params.test_exp = true; // G : test exp by default
 
     /* pim parameter */
     params.util_file = "";
@@ -345,6 +346,15 @@ void read_experiment_parameters(std::string conf_filename, uint32_t exp_type) {
         }
         else if (key == "cpkt_log_file") {
             lineStream >> params.ctrl_pkt_log_file;
+        }
+        else if (key == "test_exp") {
+            lineStream >> params.test_exp;
+        }
+        else if (key == "exp_type") {
+            lineStream >> params.exp_type;
+        }
+        else if (key == "d") {
+            lineStream >> params.d;
         }
         else if (key == "print_flow") {
             lineStream >> print_flow;

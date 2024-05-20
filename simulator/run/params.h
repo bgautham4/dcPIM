@@ -142,6 +142,9 @@ class DCExpParams {
         double alpha; // G : Value of alpha for modified pim
         uint32_t thin_type; // G : Kind of notification thinning
         std::string ctrl_pkt_log_file; //G : log file for control packet count
+        bool test_exp;
+        uint32_t exp_type;
+        uint32_t d;
         double get_full_pkt_tran_delay(uint32_t size_in_byte = 1500)
         {
             return size_in_byte * 8 / this->bandwidth;
