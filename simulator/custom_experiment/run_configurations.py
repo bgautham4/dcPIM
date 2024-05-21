@@ -2,8 +2,8 @@ import sys
 import subprocess
 from multiprocessing.pool import ThreadPool
 
-conf_file = sys.argv[0]
-output_folder = sys.argv[1]
+conf_file = sys.argv[1]
+output_folder = sys.argv[2]
 
 def run_configurations(cmd):
     try:
