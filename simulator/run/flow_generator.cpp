@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <random>
 #include <algorithm>
-#include <iterator>
 
 FlowGenerator::FlowGenerator(uint32_t num_flows, Topology *topo, std::string filename) {
     this->num_flows = num_flows;
@@ -911,15 +910,13 @@ void DFlows::make_flows() {
             }
             receivers.push_back(j);
         }
-        std::vector<decltype((topo->hosts.size()))> sampled_receivers;
         std::mt19937 random_generator(std::random_device{}());
-        std::sample(receivers.begin(), receivers.end(),
-            std::back_inserter(sampled_receivers), this->d, random_generator);
-        for (auto receiver : sampled_receivers) {
+        std::shuffle(receivers.begin(), receivers.end(), random_generator);
+        for (size_t k = 0; k < this->d; ++k) {
             Flow *f = Factory::get_flow(1.0001,
                 (uint32_t) 1000000*params.mss,
                 topo->hosts[i],
-                topo->hosts[receiver],
+                topo->hosts[receivers[k]],
                 params.flow_type
             );
             FlowArrivalEvent *evt = new FlowArrivalEvent(1.0001, f);
@@ -927,3 +924,4 @@ void DFlows::make_flows() {
         }
     }
 }
+
