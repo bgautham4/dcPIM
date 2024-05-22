@@ -316,11 +316,12 @@ void PimFlow::receive(Packet *p) {
     } else if(p->type == ACK_PACKET) {
         if(debug_flow(this->id))
             std::cout << get_current_time() << " flow " << this->id << " received ack" << std::endl;
+        // G : Flow finished, send a new notification.
+        (reinterpret_cast<PimHost*>(this->src))->notification_thinner->pop_and_notify_next(this);
         this->packets_received.clear();
         this->clear_token();
         // ((RufHost*)(this->src))->active_sending_flow = NULL;
-        add_to_event_queue(new FlowFinishedEvent(get_current_time(), this));// G : Flow finished, send a new notification.
-        (reinterpret_cast<PimHost*>(this->src))->notification_thinner->pop_and_notify_next(this);
+        add_to_event_queue(new FlowFinishedEvent(get_current_time(), this));
     } else {
         std::cout << p->type << std::endl;
         assert(false);
@@ -491,10 +492,10 @@ void PimFlow::sending_rts() {
 
 void log_control_packet() {
     static std::ofstream log_file;
-    static long long pkt_cnt = 0;
+    static unsigned long long pkt_cnt = 0;
     static double last_recorded_time = 1.0;
     
-    pkt_cnt++;
+    ++pkt_cnt;
 
     if(get_current_time() - last_recorded_time > 0.00002) {
         if (!log_file.is_open()) {

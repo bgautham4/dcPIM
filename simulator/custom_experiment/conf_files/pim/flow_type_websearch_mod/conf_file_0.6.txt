@@ -49,3 +49,4 @@ alpha: -10
 util_file: results/pim/flow_type_websearch_mod/util_0.6.txt
 thin_type: 1
 cpkt_log_file: results/pim/flow_type_websearch_mod/cpf_0.6.txt
+thin_to: 2

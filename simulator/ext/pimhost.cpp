@@ -774,9 +774,8 @@ void SampleDNotify::pop_and_notify_next(PimFlow *flow) {
         if (this->pending_flows.empty()) {
             break;
         }
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::shuffle(this->pending_flows.begin(), this->pending_flows.end(), gen);
+        std::mt19937 RNG(std::random_device{}());
+        std::shuffle(this->pending_flows.begin(), this->pending_flows.end(), RNG);
         PimFlow *new_flow = this->pending_flows.front();
         this->active_flows.push_back(new_flow);
         this->pending_flows.pop_front();
@@ -811,7 +810,7 @@ PimHost::PimHost(uint32_t id, double rate, uint32_t queue_type) : SchedulingHost
             notification_thinner = new NotifyAll();
             break;
         case 1:
-            notification_thinner = new SampleDNotify(2);
+            notification_thinner = new SampleDNotify(params.thin_to);
             break;
         default:
             notification_thinner = new NotifyAll();

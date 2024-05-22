@@ -141,6 +141,7 @@ class DCExpParams {
         bool pim_modified; // G : Run modified pim?
         double alpha; // G : Value of alpha for modified pim
         uint32_t thin_type; // G : Kind of notification thinning
+        uint32_t thin_to; // G: Value of "d" for SampleDNotify
         std::string ctrl_pkt_log_file; //G : log file for control packet count
         double get_full_pkt_tran_delay(uint32_t size_in_byte = 1500)
         {
