@@ -6,7 +6,9 @@
 //
 //
 
+#include <cstdint>
 #include <iomanip>
+#include <random>
 
 #include "event.h"
 #include "packet.h"
@@ -338,6 +340,13 @@ void FlowFinishedEvent::process_event() {
         std::cout << "bad slowdown " << "flow size:" << flow->size_in_pkt << " " << 1e6 * flow->flow_completion_time << " " << topology->get_oracle_fct(flow) << " " << slowdown << std::endl;
     }
     assert(slowdown >= 1.0);
+
+    if (params.custom_exp && this->flow->size_in_pkt > params.token_initial) {
+        auto *f = this->flow;
+        auto *next_flow = Factory::get_flow(this->time, f->size, f->src, f->dst, params.flow_type);
+        auto *next_flow_event = new FlowArrivalEvent(next_flow->start_time, next_flow);
+        add_to_event_queue(next_flow_event);
+    }
 }
 
 
@@ -398,3 +407,34 @@ void RecordQueueEvent::process_event() {
     add_to_event_queue(new RecordQueueEvent(get_current_time() + params.debug_queue_interval, params.debug_queue_interval));
 
 }
+
+ShortFlowCreator::ShortFlowCreator(double time, Host *sender, double prob_flow, uint32_t flow_size, double delta_t) :
+Event(FLOW_CREATION_EVENT, time) {
+    this->sender = sender;
+    this->prob_flow = prob_flow;
+    this->flow_size = flow_size;
+    this->delta_t = delta_t;
+}
+
+void ShortFlowCreator::process_event() {
+    std::mt19937 RNG(std::random_device{}());
+    std::uniform_int_distribution<decltype(topology->hosts.size())> uniform_drv(0,topology->hosts.size() - 1);
+    std::uniform_real_distribution<double> uniform_crv(0,1);
+    
+    auto *receiver = topology->hosts[uniform_drv(RNG)];
+    while (receiver == this->sender) {
+        receiver = topology->hosts[uniform_drv(RNG)];
+    }
+
+    add_to_event_queue(new ShortFlowCreator(this->time + this->delta_t, this->sender, 
+    this->prob_flow, this->flow_size, this->delta_t)); 
+    
+    if (uniform_crv(RNG) > this->prob_flow) {
+        return;
+    }
+
+    auto *flow = Factory::get_flow(this->time, this->flow_size,this->sender, receiver, params.flow_type);
+    auto *flow_arrival_event = new FlowArrivalEvent(this->time, flow);
+    add_to_event_queue(flow_arrival_event);
+}
+

@@ -260,6 +260,7 @@ class PimHost : public SchedulingHost {
         // int total_capa_schd_evt_count;
         // int could_better_schd_count;
         NotificationThinner *notification_thinner;
+        uint32_t num_req_sent;
 };
 
 #define PROCESS_RECEIVER_ITER_REQUEST 21

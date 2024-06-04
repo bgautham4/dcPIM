@@ -143,6 +143,10 @@ class DCExpParams {
         uint32_t thin_type; // G : Kind of notification thinning
         uint32_t thin_to; // G: Value of "d" for SampleDNotify
         std::string ctrl_pkt_log_file; //G : log file for control packet count
+        bool custom_exp;
+        uint32_t exp_type;
+        double rho;
+        double num_short_flows;
         double get_full_pkt_tran_delay(uint32_t size_in_byte = 1500)
         {
             return size_in_byte * 8 / this->bandwidth;

@@ -349,6 +349,18 @@ void read_experiment_parameters(std::string conf_filename, uint32_t exp_type) {
         else if (key == "cpkt_log_file") {
             lineStream >> params.ctrl_pkt_log_file;
         }
+        else if (key == "custom_exp") {
+            lineStream >> params.custom_exp;
+        }
+        else if (key == "exp_type") {
+            lineStream >> params.exp_type;
+        }
+        else if (key == "short_flow_cnt") {
+            lineStream >> params.num_short_flows;
+        }
+        else if (key == "rho") {
+            lineStream >> params.rho;
+        }
         else if (key == "print_flow") {
             lineStream >> print_flow;
         }

@@ -6,7 +6,9 @@
 //
 
 #include "flow_generator.h"
-
+#include <cstdint>
+#include <random>
+#include "../ext/factory.h"
 FlowGenerator::FlowGenerator(uint32_t num_flows, Topology *topo, std::string filename) {
     this->num_flows = num_flows;
     this->topo = topo;
@@ -892,4 +894,35 @@ void OutcastTM::make_flows() {
 //     current_time = 0;
 // }
 
+RhoFlowGen::RhoFlowGen(Topology *topo, double rho, double short_flow_cnt, uint32_t large_flow_size, uint32_t short_flow_size) 
+: FlowGenerator(0, topo, "") {
+    this->large_flow_size = large_flow_size;
+    this->short_flow_size = short_flow_size;
+    this->rho  = rho;
+    this->short_flow_cnt = short_flow_cnt;
+    this->mtu_slot_dur = 1500 / (params.bandwidth / 8);
+    this->mtu_slots_per_epoch = (params.pim_epoch / 2) / this->mtu_slot_dur;
+}
 
+void RhoFlowGen::make_flows() {
+    std::mt19937 RNG(std::random_device{}());
+    std::uniform_real_distribution<double> uniform_crv(0.0,1.0);
+    double prob_flow = this->rho / topo->hosts.size();
+    for (auto &sender : topo->hosts) {
+        
+        double random_offset = uniform_crv(RNG) * 0.1;
+        
+        auto *short_flow_event = new ShortFlowCreator(1.0 + random_offset, sender,this->short_flow_cnt / this->mtu_slots_per_epoch,
+        this->short_flow_size * params.mss, this->mtu_slot_dur);            
+        add_to_event_queue(short_flow_event);
+        
+        for (auto &receiver : topo->hosts) {
+            if (sender == receiver || uniform_crv(RNG) > prob_flow) {
+                continue;
+            }
+            auto *long_flow = Factory::get_flow(1.0 + random_offset, this->large_flow_size * params.mss, sender, receiver,params.flow_type);
+            auto *long_flow_arrival_event = new FlowArrivalEvent(long_flow->start_time, long_flow);
+            add_to_event_queue(long_flow_arrival_event); 
+        }
+    }
+}

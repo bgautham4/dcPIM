@@ -1,3 +1,4 @@
+#include <exception>
 #include <iostream>
 #include <algorithm>
 #include <fstream>
@@ -191,7 +192,18 @@ void run_experiment(int argc, char **argv, uint32_t exp_type) {
     FlowGenerator *fg;
     // Make the camparision apple to apple;
     srand(0);
-    if (params.use_flow_trace) {
+    if (params.custom_exp) {
+        switch (params.exp_type) {
+            case 1:
+                fg = new RhoFlowGen(topology, params.rho, params.num_short_flows);
+                break;
+            default:
+                std::cout << "Unknown exp, exiting!!" << std::endl;
+                return;
+        }
+        fg->make_flows();
+    }
+    else if (params.use_flow_trace) {
         if(params.cdf_or_flow_trace != "") {
             fg = new FlowReader(num_flows, topology, params.cdf_or_flow_trace);
             fg->make_flows();

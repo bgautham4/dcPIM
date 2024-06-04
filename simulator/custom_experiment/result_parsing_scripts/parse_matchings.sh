@@ -14,6 +14,7 @@ fi
 
 for result_file in "$op_dir/flow_"*; do    
     load=$(basename -s .txt $result_file | cut -d'_' -f3)
+    
     match_value=$(grep "AVG_MATCHES" $result_file | cut -d' ' -f2)
 
     if [[ -z "$var_param" ]]; then

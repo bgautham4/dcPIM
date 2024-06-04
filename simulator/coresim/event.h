@@ -9,6 +9,7 @@
 #ifndef EVENT_H
 #define EVENT_H
 
+#include <cstdint>
 #include <iostream>
 #include <math.h>
 #include <queue>
@@ -164,6 +165,17 @@ class RecordQueueEvent : public Event {
         ~RecordQueueEvent();
         void process_event();
         double interval;
+};
+
+class ShortFlowCreator : public Event {
+    private:
+        Host *sender;
+        double prob_flow;
+        uint32_t flow_size;
+        double delta_t; //Time difference between successive events 
+    public:
+        ShortFlowCreator(double time, Host *sender, double prob_flow, uint32_t flow_size, double delta_t);
+        virtual void process_event();
 };
 
 #endif /* defined(EVENT_H) */

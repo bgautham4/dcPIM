@@ -111,7 +111,7 @@ void run_scenario() {
         }
         ev->process_event();
 
-        if(last_evt_type == ev->type && last_evt_type != 9)
+        if(last_evt_type == ev->type && (last_evt_type != 9))
             same_evt_count++;
         else
             same_evt_count = 0;

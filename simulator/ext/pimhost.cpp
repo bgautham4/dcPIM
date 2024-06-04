@@ -348,12 +348,13 @@ void PimEpoch::send_all_req() {
     int avail_prompt_link = params.pim_k - this->num_tx_prompt_link;
     int per_link_pkt = params.pim_link_pkts;
     // printf("per link pkt:%d\n", per_link_pkt);
+    std::vector<PimFlow*> best_flows;
     for(auto i = this->host->src_to_flows.begin(); i != this->host->src_to_flows.end();) {
         // if(this->receiver_state[i->first] == false) {  
         //     i++;
         //     continue;
         // }
-
+        
         PimFlow* best_flow = NULL;
         std::queue<PimFlow*> flows_tried;
         while(!i->second.empty()) {
@@ -370,24 +371,7 @@ void PimEpoch::send_all_req() {
             }
         }
         if(best_flow != NULL) {
-            int grant_size = 0;
-            for (unsigned int j = 0; j < this->host->match_sender_links.size(); j++) {
-                if(this->host->match_sender_links[j].target == best_flow->src) {
-                    grant_size += this->host->match_sender_links[j].total_links;
-                }
-            }
-            for (unsigned int j = 0; j < this->match_sender_links.size(); j++) {
-                if(this->match_sender_links[j].target == best_flow->src) {
-                    grant_size += this->match_sender_links[j].total_links;
-                }
-            }
-
-            if(grant_size * per_link_pkt < best_flow->remaining_pkts()){
-                int need_link = std::min(int(ceil(best_flow->remaining_pkts() / (double)per_link_pkt) - grant_size), avail_link);
-                int prompt_link = std::min(need_link, avail_prompt_link);
-                assert(prompt_link >= 0);
-                best_flow->send_req(this->iter, this->epoch, need_link, prompt_link);
-            }
+            best_flows.push_back(best_flow);
         }
         while(!flows_tried.empty()) {
             i->second.push(flows_tried.front());
@@ -397,6 +381,34 @@ void PimEpoch::send_all_req() {
             i = this->host->src_to_flows.erase(i);
         } else {
             i++;
+        }
+    }
+
+    decltype(best_flows.size()) cnt = 0;
+    std::mt19937 RNG(std::random_device{}());
+    std::shuffle(best_flows.begin(), best_flows.end(), RNG);
+
+    for (auto best_flow : best_flows) {
+        if (params.pim_modified && params.thin_type == 2 && cnt > params.thin_to) {
+            break;
+        }
+        this->host->num_req_sent = ++cnt;
+        int grant_size = 0;
+        for (unsigned int j = 0; j < this->host->match_sender_links.size(); j++) {
+            if(this->host->match_sender_links[j].target == best_flow->src) {
+                grant_size += this->host->match_sender_links[j].total_links;
+            }
+        }
+        for (unsigned int j = 0; j < this->match_sender_links.size(); j++) {
+            if(this->match_sender_links[j].target == best_flow->src) {
+                grant_size += this->match_sender_links[j].total_links;
+            }
+        }
+        if(grant_size * per_link_pkt < best_flow->remaining_pkts()){
+            int need_link = std::min(int(ceil(best_flow->remaining_pkts() / (double)per_link_pkt) - grant_size), avail_link);
+            int prompt_link = std::min(need_link, avail_prompt_link);
+            assert(prompt_link >= 0);
+            best_flow->send_req(this->iter, this->epoch, need_link, prompt_link);
         }
     }
 }
@@ -439,8 +451,8 @@ void PimEpoch::handle_all_req() {
             std::vector<uint32_t> receiver_indices;
             std::vector<uint32_t> sender_counts;
             for (int i = 0; i < this->req_q.size(); i++) {
-                auto receiver = (PimHost*)req_q[i].f->dst;
-                uint32_t sender_count = receiver->src_to_flows.size();
+                auto receiver = reinterpret_cast<PimHost*>(req_q[i].f->dst);
+                uint32_t sender_count = receiver->num_req_sent;
                 receiver_indices.push_back(i);
                 sender_counts.push_back(sender_count);
             }
@@ -454,27 +466,28 @@ void PimEpoch::handle_all_req() {
             for (uint32_t count:sender_counts) {
                 pmf.push_back(std::pow(count, params.alpha) / denominator);
             }
-            // Create a random engine
-            std::random_device rd;
-            std::mt19937 gen(rd());
+            // Create a random number generator:
+            std::mt19937 RNG(std::random_device{}());
             // Create a discrete distribution with the weights
-            std::discrete_distribution<int> distribution(pmf.begin(), pmf.end());
+            std::discrete_distribution<decltype(receiver_indices.size())> distribution(pmf.begin(), pmf.end());
             //Sample a receiver
             if (params.alpha > 0) {// G : Use this to indicate alpha = -inf
                 auto min_it = std::min_element(sender_counts.begin(), sender_counts.end());
-                decltype(sender_counts.size()) vec_index = 0;
-                std::vector<decltype(vec_index)> indices;
-                for(auto val:sender_counts) {
-                    if(val == *min_it) {
-                        indices.push_back(vec_index);
-                    }
-                    ++vec_index;
+                auto min_val = *min_it;
+                std::vector<decltype(receiver_indices.size())> indices;
+                
+                while (min_it != sender_counts.end()) {
+                    indices.push_back(min_it - sender_counts.begin());
+                    //Find all occurances of the minimum value 
+                    min_it = std::find(min_it + 1, sender_counts.end(), min_val);
                 }
                 //int min_index = std::distance(sender_counts.begin(), min_it);
-                index = receiver_indices[indices[rand() % indices.size()]];
+                std::uniform_int_distribution<decltype(indices.size())> uniform_drv;
+
+                index = receiver_indices[indices[uniform_drv(RNG)]];
             }
             else {
-                index = receiver_indices[distribution(gen)];
+                index = receiver_indices[distribution(RNG)];
             }
         }
         /* check iteration number */
@@ -816,7 +829,7 @@ PimHost::PimHost(uint32_t id, double rate, uint32_t queue_type) : SchedulingHost
             notification_thinner = new NotifyAll();
             break;
     }
-
+    this->num_req_sent = 0;
 }
 
 void PimHost::start_new_epoch(double time, int epoch) {

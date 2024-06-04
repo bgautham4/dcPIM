@@ -8,6 +8,7 @@
 #ifndef FLOW_GEN_H
 #define FLOW_GEN_H
 
+#include <cstdint>
 #include <iostream>
 #include <algorithm>
 #include <fstream>
@@ -120,5 +121,19 @@ class WorstcaseTM : public FlowGenerator {
 public:
     WorstcaseTM(uint32_t num_flows, Topology *topo, std::string filename);
     virtual void make_flows();
+};
+
+//Custom rho_flow gen:
+class RhoFlowGen : public FlowGenerator {
+    private:
+        double rho;
+        uint32_t short_flow_size; // In packets.
+        uint32_t large_flow_size; //In packets.
+        double short_flow_cnt;
+        double mtu_slot_dur;
+        double mtu_slots_per_epoch;
+    public:
+        RhoFlowGen(Topology *topo, double rho,double short_flow_cnt, uint32_t large_flow_size = 5000, uint32_t short_flow_size = params.token_initial);
+        virtual void make_flows();
 };
 #endif
