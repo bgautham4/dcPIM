@@ -51,6 +51,7 @@
 #include "pim_host.h"
 #include "pim_pacer.h"
 #include "random_variable.h"
+#include "tracing.h"
 
 int mode;
 uint64_t start, end;
@@ -541,6 +542,8 @@ signal_handler(int signum)
 				printf("flow id:%u\n", pim_data_hdr->flow_id);
 
 			}
+			dump_ctrl_packet_counts(&ctrl_pkt_cntr);
+			dump_match_count(&match_cntr);
 			pim_host_dump(&host, &pacer);
 		}
 
