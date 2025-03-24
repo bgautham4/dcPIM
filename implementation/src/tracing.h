@@ -15,7 +15,7 @@ typedef enum ctrlpacket_t {
 } ctrlpacket_t;
 
 /*
-For tracking number of control packets transmitted by each host
+For tracking number of control packets received by each host
 */
 typedef struct CtrlPacketCounter {
 	unsigned long packet_counts[NUM_CTRL_PACKET_TYPES];		 

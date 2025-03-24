@@ -188,22 +188,28 @@ struct rte_mbuf* p) {
     if(pim_hdr->type == PIM_FLOW_SYNC) {
         struct pim_flow_sync_hdr *pim_flow_sync_hdr = rte_pktmbuf_mtod_offset(p, struct pim_flow_sync_hdr*, offset);
         pim_receive_flow_sync(host, pacer, ether_hdr, ipv4_hdr, pim_flow_sync_hdr);
+        incr_ctrl_packet_count(&ctrl_pkt_cntr, SYNC);
     } else if(pim_hdr->type == PIM_FLOW_SYNC_ACK) {
         struct pim_flow_sync_ack_hdr *pim_flow_sync_ack_hdr = rte_pktmbuf_mtod_offset(p, struct pim_flow_sync_ack_hdr*, offset);
         pim_cancel_rtx_flow_sync(host, pim_flow_sync_ack_hdr->flow_id);
+        incr_ctrl_packet_count(&ctrl_pkt_cntr, SYNCS_ACK); 
     } else if(pim_hdr->type == PIM_RTS) {
         struct pim_rts_hdr *pim_rts_hdr = rte_pktmbuf_mtod_offset(p, struct pim_rts_hdr*, offset);
         pim_receive_rts(epoch, ether_hdr, ipv4_hdr, pim_rts_hdr);
+        incr_ctrl_packet_count(&ctrl_pkt_cntr, RTS);
     } else if (pim_hdr->type == PIM_GRANT) {
         struct pim_grant_hdr *pim_grant_hdr = rte_pktmbuf_mtod_offset(p, struct pim_grant_hdr*, offset);
         pim_receive_grant(epoch, ether_hdr, ipv4_hdr, pim_grant_hdr);
+        incr_ctrl_packet_count(&ctrl_pkt_cntr, GRANT);
 
     } else if (pim_hdr->type == PIM_ACCEPT) {
         struct pim_accept_hdr *pim_accept_hdr = rte_pktmbuf_mtod_offset(p, struct pim_accept_hdr*, offset);
         pim_receive_accept(epoch, host, pacer, ether_hdr, ipv4_hdr, pim_accept_hdr);
+        incr_ctrl_packet_count(&ctrl_pkt_cntr, ACCEPT);
     } else if (pim_hdr->type == PIM_GRANTR) {
         struct pim_grantr_hdr *pim_grantr_hdr = rte_pktmbuf_mtod_offset(p, struct pim_grantr_hdr*, offset);
         pim_receive_grantr(epoch, host, pim_grantr_hdr);
+        incr_ctrl_packet_count(&ctrl_pkt_cntr, GRANTR);
         // free p is the repsonbility of the sender
     } else if (pim_hdr->type == PIM_FIN) {
         struct pim_fin_hdr *pim_fin_hdr = rte_pktmbuf_mtod_offset(p, struct pim_fin_hdr*, offset);
@@ -536,7 +542,6 @@ void pim_receive_accept(struct pim_epoch* pim_epoch, struct pim_host* host, stru
             struct rte_mbuf *p = pim_get_grantr_pkt(ether_hdr, ipv4_hdr, pim_epoch->iter, pim_epoch->epoch);
             //rte_eth_tx_burst(get_port_by_ip(rte_be_to_cpu_32(ipv4_hdr->src_addr)) ,0, &p, 1);
             enqueue_ring(pacer->ctrl_q, p);
-            incr_ctrl_packet_count(&ctrl_pkt_cntr, GRANTR);
         } else {
             pim_epoch->match_dst_addr = rte_be_to_cpu_32(ipv4_hdr->dst_addr);
             incr_match_count(&match_cntr, pim_epoch->epoch);
@@ -558,7 +563,6 @@ void pim_handle_all_rts(struct pim_epoch* pim_epoch, struct pim_host* host, stru
         if(pim_epoch->min_rts != NULL) {
             struct rte_mbuf *p = pim_get_grant_pkt(pim_epoch->min_rts, pim_epoch->iter, pim_epoch->epoch, pim_epoch->epoch - 1 == host->cur_epoch && host->cur_match_dst_addr == 0);
             enqueue_ring(pacer->ctrl_q, p);
-            incr_ctrl_packet_count(&ctrl_pkt_cntr, GRANT);
             //rte_eth_tx_burst(get_port_by_ip(pim_epoch->min_rts->src_addr) ,0, &p, 1);
         }
     }
@@ -567,7 +571,6 @@ void pim_handle_all_rts(struct pim_epoch* pim_epoch, struct pim_host* host, stru
             index =  (uint32_t)(rte_rand() % pim_epoch->rts_size);
             struct rte_mbuf *p = pim_get_grant_pkt(&pim_epoch->rts_q[index], pim_epoch->iter, pim_epoch->epoch, pim_epoch->epoch - 1 == host->cur_epoch && host->cur_match_dst_addr == 0);
             enqueue_ring(pacer->ctrl_q, p);
-            incr_ctrl_packet_count(&ctrl_pkt_cntr, GRANT);
             // rte_eth_tx_burst(get_port_by_ip(pim_epoch->rts_q[index].src_addr) ,0, &p, 1);
 
         }
@@ -593,7 +596,6 @@ void pim_handle_all_grant(struct pim_epoch* pim_epoch, struct pim_host* host, st
             pim_epoch->match_src_addr = grant->src_addr;
             struct rte_mbuf *p = pim_get_accept_pkt(pim_epoch->min_grant, pim_epoch->iter, pim_epoch->epoch);
             enqueue_ring(pacer->ctrl_q, p);
-            incr_ctrl_packet_count(&ctrl_pkt_cntr, ACCEPT);
             // rte_eth_tx_burst(get_port_by_ip(grant->dst_addr) ,0, &p, 1);
 
         }
@@ -607,7 +609,6 @@ void pim_handle_all_grant(struct pim_epoch* pim_epoch, struct pim_host* host, st
                 pim_epoch->match_src_addr = grant->src_addr;
                 struct rte_mbuf *p = pim_get_accept_pkt(&pim_epoch->grants_q[index], pim_epoch->iter, pim_epoch->epoch);
                 enqueue_ring(pacer->ctrl_q, p);
-                incr_ctrl_packet_count(&ctrl_pkt_cntr, GRANT);
                 // rte_eth_tx_burst(get_port_by_ip(grant->dst_addr) ,0, &p, 1);
 
             }
@@ -653,7 +654,6 @@ void pim_send_all_rts(struct pim_epoch* pim_epoch, struct pim_host* host, struct
             struct rte_mbuf *p = pim_get_rts_pkt(smallest_flow, pim_epoch->iter, pim_epoch->epoch);
             // rte_eth_tx_burst(get_port_by_ip(smallest_flow->_f.dst_addr) ,0, &p, 1);
      	    enqueue_ring(pacer->ctrl_q, p);
-            incr_ctrl_packet_count(&ctrl_pkt_cntr, RTS);
         } 
     }
 }
@@ -917,7 +917,6 @@ void pim_send_flow_sync(struct pim_pacer* pacer, struct pim_host* host, struct p
     pim_flow_sync_hdr->start_time = flow->_f.start_time;
     //push the packet
     enqueue_ring(pacer->ctrl_q, p);
-    incr_ctrl_packet_count(&ctrl_pkt_cntr, SYNC);
 }
 
 void pim_send_flow_sync_ack(struct pim_pacer* pacer, struct ether_hdr* ether_hdr, 
@@ -953,7 +952,6 @@ void pim_send_flow_sync_ack(struct pim_pacer* pacer, struct ether_hdr* ether_hdr
     // //push the packet
 
     enqueue_ring(pacer->ctrl_q, p);
-    incr_ctrl_packet_count(&ctrl_pkt_cntr, SYNCS_ACK); 
 }
 
 void pim_send_flow_fin_ack(struct pim_pacer* pacer, struct ether_hdr* ether_hdr, 
