@@ -98,6 +98,9 @@ static uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
 
 /*mbuf pool*/
 struct rte_mempool * pktmbuf_pool = NULL;
+#ifndef NDEBUG
+struct rte_ring *message_ring = NULL;
+#endif
 struct pim_epoch epoch;
 struct pim_host host;
 struct pim_pacer pacer;
@@ -382,6 +385,20 @@ static void flow_generate_loop(void) {
 }
 
 
+#ifndef NDEBUG
+void print_loop(void) {
+	printf("Starting print loop!\n");
+	char *msg;
+	while(1) {
+		if (rte_ring_dequeue(message_ring, (void*)&msg) == -ENOENT) {
+			continue;
+		}
+		fputs(msg, stdout);
+		rte_free(msg);
+	}
+}
+#endif
+
 static int
 launch_host_lcore(__attribute__((unused)) void *dummy) {
 	host_main_loop();
@@ -407,6 +424,12 @@ launch_start_lcore(__attribute__((unused)) void *dummy) {
 }
 
 
+#ifndef NDEBUG
+static int launch_print_loop(__rte_unused void *args) {
+	print_loop();
+	return 0;
+}
+#endif
 /* Check the link status of all ports in up to 9s, and print them finally */
 static void
 check_all_ports_link_status(void) {
@@ -616,6 +639,12 @@ main(int argc, char **argv)
 	if (pktmbuf_pool == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot init mbuf pool\n");
 
+	#ifndef NDEBUG
+	message_ring = rte_ring_create("debug message ring", 8192, 0, RING_F_SC_DEQ);
+	if (message_ring == NULL) {
+		rte_exit(EXIT_FAILURE, "Cannot init message ring\n");
+	}
+	#endif
 	/* Initialise each port */
 	RTE_ETH_FOREACH_DEV(portid) {
 		struct rte_eth_rxconf rxq_conf;
@@ -713,6 +742,9 @@ main(int argc, char **argv)
 	    rte_eal_remote_launch(launch_host_lcore, NULL, RECEIVE_CORE);
 		rte_eal_remote_launch(launch_pacer_lcore, NULL, 2);
 	    rte_eal_remote_launch(launch_flowgen_lcore, NULL, 3);
+		#ifndef NDEBUG
+		rte_eal_remote_launch(launch_print_loop, NULL, 5);
+		#endif
 		// rte_eal_remote_launch(launch_start_lcore, NULL, 4);
 
 	}  

@@ -10,6 +10,10 @@
 
 extern struct rte_mempool* pktmbuf_pool;
 
+#ifndef NDEBUG
+extern struct rte_ring *message_ring;
+#endif
+
 bool pim_pflow_compare(const void* a, const void* b) {
     if(a == NULL)
         return true;
@@ -189,23 +193,61 @@ struct rte_mbuf* p) {
         struct pim_flow_sync_hdr *pim_flow_sync_hdr = rte_pktmbuf_mtod_offset(p, struct pim_flow_sync_hdr*, offset);
         pim_receive_flow_sync(host, pacer, ether_hdr, ipv4_hdr, pim_flow_sync_hdr);
         incr_ctrl_packet_count(&ctrl_pkt_cntr, SYNC);
+        #ifndef NDEBUG
+        uint32_t src_addr = rte_be_to_cpu_32(ipv4_hdr->src_addr);
+        char *msg = rte_malloc("MSG:LOG_SYNC", 128, 0);
+        snprintf(msg, 128, "RX SYNC %d.%d.%d.%d\n", src_addr >> 24 & 0xFF, src_addr >> 16 & 0xFF, src_addr >> 8 & 0xFF, src_addr & 0xFF);
+        rte_ring_enqueue(message_ring, (void*)msg);
+        #endif
     } else if(pim_hdr->type == PIM_FLOW_SYNC_ACK) {
         struct pim_flow_sync_ack_hdr *pim_flow_sync_ack_hdr = rte_pktmbuf_mtod_offset(p, struct pim_flow_sync_ack_hdr*, offset);
         pim_cancel_rtx_flow_sync(host, pim_flow_sync_ack_hdr->flow_id);
         incr_ctrl_packet_count(&ctrl_pkt_cntr, SYNCS_ACK); 
+
+        #ifndef NDEBUG
+        uint32_t src_addr = rte_be_to_cpu_32(ipv4_hdr->src_addr);
+        char *msg = rte_malloc("MSG:LOG_SYNC_ACK", 128, 0);
+        snprintf(msg, 128, "RX SYNC_ACK %d.%d.%d.%d\n", src_addr >> 24 & 0xFF, src_addr >> 16 & 0xFF, src_addr >> 8 & 0xFF, src_addr & 0xFF);
+        rte_ring_enqueue(message_ring, (void*)msg);
+        #endif
+
     } else if(pim_hdr->type == PIM_RTS) {
         struct pim_rts_hdr *pim_rts_hdr = rte_pktmbuf_mtod_offset(p, struct pim_rts_hdr*, offset);
         pim_receive_rts(epoch, ether_hdr, ipv4_hdr, pim_rts_hdr);
         incr_ctrl_packet_count(&ctrl_pkt_cntr, RTS);
+
+        #ifndef NDEBUG
+        uint32_t src_addr = rte_be_to_cpu_32(ipv4_hdr->src_addr);
+        char *msg = rte_malloc("MSG:LOG_RTS", 128, 0);
+        snprintf(msg, 128, "RX RTS %d.%d.%d.%d %d\n", src_addr >> 24 & 0xFF, src_addr >> 16 & 0xFF, src_addr >> 8 & 0xFF, src_addr & 0xFF, pim_rts_hdr->epoch);
+        rte_ring_enqueue(message_ring, (void*)msg);
+        #endif
+
     } else if (pim_hdr->type == PIM_GRANT) {
         struct pim_grant_hdr *pim_grant_hdr = rte_pktmbuf_mtod_offset(p, struct pim_grant_hdr*, offset);
         pim_receive_grant(epoch, ether_hdr, ipv4_hdr, pim_grant_hdr);
         incr_ctrl_packet_count(&ctrl_pkt_cntr, GRANT);
 
+        #ifndef NDEBUG
+        uint32_t src_addr = rte_be_to_cpu_32(ipv4_hdr->src_addr);
+        char *msg = rte_malloc("MSG:LOG_GRANT", 128, 0);
+        snprintf(msg, 128, "RX GRANT %d.%d.%d.%d %d\n", src_addr >> 24 & 0xFF, src_addr >> 16 & 0xFF, src_addr >> 8 & 0xFF, src_addr & 0xFF, pim_grant_hdr->epoch);
+        rte_ring_enqueue(message_ring, (void*)msg);
+        #endif
+
+
     } else if (pim_hdr->type == PIM_ACCEPT) {
         struct pim_accept_hdr *pim_accept_hdr = rte_pktmbuf_mtod_offset(p, struct pim_accept_hdr*, offset);
         pim_receive_accept(epoch, host, pacer, ether_hdr, ipv4_hdr, pim_accept_hdr);
         incr_ctrl_packet_count(&ctrl_pkt_cntr, ACCEPT);
+
+        #ifndef NDEBUG
+        uint32_t src_addr = rte_be_to_cpu_32(ipv4_hdr->src_addr);
+        char *msg = rte_malloc("MSG:LOG_ACCEPT", 128, 0);
+        snprintf(msg, 128, "RX ACCEPT %d.%d.%d.%d %d\n", src_addr >> 24 & 0xFF, src_addr >> 16 & 0xFF, src_addr >> 8 & 0xFF, src_addr & 0xFF, pim_accept_hdr->epoch);
+        rte_ring_enqueue(message_ring, (void*)msg);
+        #endif
+
     } else if (pim_hdr->type == PIM_GRANTR) {
         struct pim_grantr_hdr *pim_grantr_hdr = rte_pktmbuf_mtod_offset(p, struct pim_grantr_hdr*, offset);
         pim_receive_grantr(epoch, host, pim_grantr_hdr);
@@ -571,6 +613,13 @@ void pim_handle_all_rts(struct pim_epoch* pim_epoch, struct pim_host* host, stru
             index =  (uint32_t)(rte_rand() % pim_epoch->rts_size);
             struct rte_mbuf *p = pim_get_grant_pkt(&pim_epoch->rts_q[index], pim_epoch->iter, pim_epoch->epoch, pim_epoch->epoch - 1 == host->cur_epoch && host->cur_match_dst_addr == 0);
             enqueue_ring(pacer->ctrl_q, p);
+            #ifndef NDEBUG
+            char *msg = rte_malloc("MSG:SEND_GRANT", 128, 0);
+            uint32_t dst_addr = pim_epoch->rts_q[index].dst_addr;
+            snprintf(msg, 128, "TX GRANT %d.%d.%d.%d %d\n", dst_addr >> 24 & 0xFF, dst_addr >> 16 & 0xFF, dst_addr >> 8 & 0xFF, dst_addr & 0xFF, pim_epoch->epoch);
+            rte_ring_enqueue(message_ring, (void *)msg);
+            #endif
+
             // rte_eth_tx_burst(get_port_by_ip(pim_epoch->rts_q[index].src_addr) ,0, &p, 1);
 
         }
@@ -609,6 +658,13 @@ void pim_handle_all_grant(struct pim_epoch* pim_epoch, struct pim_host* host, st
                 pim_epoch->match_src_addr = grant->src_addr;
                 struct rte_mbuf *p = pim_get_accept_pkt(&pim_epoch->grants_q[index], pim_epoch->iter, pim_epoch->epoch);
                 enqueue_ring(pacer->ctrl_q, p);
+                #ifndef NDEBUG
+                char *msg = rte_malloc("MSG:SEND_ACCEPT", 128, 0);
+                uint32_t dst_addr = pim_epoch->grants_q[index].src_addr;
+                snprintf(msg, 128, "TX ACCEPT %d.%d.%d.%d %d\n", dst_addr >> 24 & 0xFF, dst_addr >> 16 & 0xFF, dst_addr >> 8 & 0xFF, dst_addr & 0xFF, pim_epoch->epoch);
+                rte_ring_enqueue(message_ring, (void *)msg);
+                #endif
+
                 // rte_eth_tx_burst(get_port_by_ip(grant->dst_addr) ,0, &p, 1);
 
             }
@@ -654,6 +710,12 @@ void pim_send_all_rts(struct pim_epoch* pim_epoch, struct pim_host* host, struct
             struct rte_mbuf *p = pim_get_rts_pkt(smallest_flow, pim_epoch->iter, pim_epoch->epoch);
             // rte_eth_tx_burst(get_port_by_ip(smallest_flow->_f.dst_addr) ,0, &p, 1);
      	    enqueue_ring(pacer->ctrl_q, p);
+            #ifndef NDEBUG
+            uint32_t src_ip = smallest_flow->_f.src_addr;
+            char *msg = rte_malloc("MSG:TX_RTS", 128, 0);
+            snprintf(msg, 128, "TX RTS %d.%d.%d.%d %d\n", src_ip >> 24 & 0xFF, src_ip >> 16 & 0xFF, src_ip >> 8 & 0xFF, src_ip & 0xFF, pim_epoch->epoch);
+            rte_ring_enqueue(message_ring, (void *)msg);
+            #endif
         } 
     }
 }
@@ -663,6 +725,12 @@ void pim_schedule_sender_iter_evt(__rte_unused struct rte_timer *timer, void* ar
     struct pim_epoch* pim_epoch = pim_timer_params->pim_epoch;
     struct pim_host* pim_host = pim_timer_params->pim_host;
     struct pim_pacer* pim_pacer = pim_timer_params->pim_pacer;
+
+    #ifndef NDEBUG
+    char *msg = rte_malloc("LOG:SENDER_ITER", 128, 0);
+    snprintf(msg, 128, "xxxxSENDER_ITERxxxxx\n");
+    rte_ring_enqueue(message_ring, (void*)msg);
+    #endif
 
     if(pim_epoch->iter > params.pim_iter_limit) {
         return;
@@ -694,6 +762,12 @@ void pim_schedule_receiver_iter_evt(__rte_unused struct rte_timer *timer, void* 
     struct pim_host* pim_host = pim_timer_params->pim_host;
     struct pim_pacer* pim_pacer = pim_timer_params->pim_pacer;
     // printf("%"PRIu64"receiver iter: %d epoch: %d\n", rte_get_tsc_cycles(), pim_epoch->iter, pim_epoch->epoch);
+
+    #ifndef NDEBUG
+    char *msg = rte_malloc("LOG:RECV_ITER", 128, 0);
+    snprintf(msg, 128, "xxxxRECV_ITERxxxxx\n");
+    rte_ring_enqueue(message_ring, (void*)msg);
+    #endif
 
     if(pim_epoch->iter > 0) {
         pim_handle_all_grant(pim_epoch, pim_host, pim_pacer);
@@ -779,6 +853,11 @@ void pim_start_new_epoch(__rte_unused struct rte_timer *timer, void* arg) {
     // }
     // do the first iteration sender event here
     // pim_schedule_sender_iter_evt(&pim_epoch->sender_iter_timer, (void *)(&pim_epoch->pim_timer_params));
+    #ifndef NDEBUG
+    char *msg = rte_malloc("MSG:EPOCH_START", 128, 0);
+    snprintf(msg, 128, "---------Starting new epoch %d--------------\n", pim_epoch->epoch);
+    rte_ring_enqueue(message_ring, (void *)msg);
+    #endif
 }
 void pim_receive_flow_sync(struct pim_host* host, struct pim_pacer* pacer, struct ether_hdr* ether_hdr,
     struct ipv4_hdr* ipv4_hdr, struct pim_flow_sync_hdr* pim_flow_sync_hdr) {
@@ -917,6 +996,12 @@ void pim_send_flow_sync(struct pim_pacer* pacer, struct pim_host* host, struct p
     pim_flow_sync_hdr->start_time = flow->_f.start_time;
     //push the packet
     enqueue_ring(pacer->ctrl_q, p);
+    #ifndef NDEBUG
+    char *msg = rte_malloc("MSG:SEND_SYNC", 128, 0);
+    uint32_t dst_addr = flow->_f.dst_addr;
+    snprintf(msg, 128, "TX SYNC %d.%d.%d.%d\n", dst_addr >> 24 & 0xFF, dst_addr >> 16 & 0xFF, dst_addr >> 8 & 0xFF, dst_addr & 0xFF);
+    rte_ring_enqueue(message_ring, (void *)msg);
+    #endif
 }
 
 void pim_send_flow_sync_ack(struct pim_pacer* pacer, struct ether_hdr* ether_hdr, 
@@ -952,6 +1037,12 @@ void pim_send_flow_sync_ack(struct pim_pacer* pacer, struct ether_hdr* ether_hdr
     // //push the packet
 
     enqueue_ring(pacer->ctrl_q, p);
+    #ifndef NDEBUG
+    char *msg = rte_malloc("MSG:SEND_SYNC", 128, 0);
+    uint32_t dst_addr = rte_be_to_cpu_32(ipv4_hdr->src_addr);
+    snprintf(msg, 128, "TX SYNC_ACK %d.%d.%d.%d\n", dst_addr >> 24 & 0xFF, dst_addr >> 16 & 0xFF, dst_addr >> 8 & 0xFF, dst_addr & 0xFF);
+    rte_ring_enqueue(message_ring, (void *)msg);
+    #endif
 }
 
 void pim_send_flow_fin_ack(struct pim_pacer* pacer, struct ether_hdr* ether_hdr, 
